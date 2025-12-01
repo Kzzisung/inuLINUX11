@@ -1,27 +1,39 @@
 #!/bin/bash
 # process_monitor.sh
 # 작성자: 강지성
-# 기능: 실시간 프로세스 모니터링 (ps aux 호환성 버전)
+# 기능: 실시간 프로세스 모니터링 (빈 줄 제거 필터링 추가)
 
 while true; do
     clear
-    echo "========================================"
-    echo "   실시간 프로세스 모니터링 (CPU순)    "
-    echo "========================================"
+    echo "================================================================"
+    echo "       실시간 프로세스 모니터링 (실행 중인 앱 - 메모리순)      "
+    echo "================================================================"
     
-    # 헤더 직접 출력 (모양 예쁘게 잡기)
-    printf "%-8s %-10s %-6s %-6s %s\n" "PID" "USER" "%CPU" "%MEM" "COMMAND"
-    echo "----------------------------------------"
+    # 헤더 출력
+    printf "%-20s : %-10s : %-10s : %s\n" "PROGRAM NAME" "MEM(MB)" "CPU(sec)" "PID"
+    echo "----------------------------------------------------------------"
 
-    # ps aux 명령어 사용 (호환성 개선)
-    # 1. ps aux: 모든 프로세스 정보 출력
-    # 2. tail -n +2: 첫 줄(헤더) 제거
-    # 3. sort -k 3 -nr: 3번째 열(%CPU) 기준으로 숫자 내림차순 정렬
-    # 4. head -n 5: 상위 5개만 자름
-    # 5. awk: PID($2), USER($1), CPU($3), MEM($4), CMD($11) 순서로 출력
-    ps aux | tail -n +2 | sort -k 3 -nr | head -n 5 | awk '{printf "%-8s %-10s %-6s %-6s %s\n", $2, $1, $3, $4, $11}'
+    # [핵심 로직]
+    # awk 안에 'if ($1 == "") next;' 를 추가하여 빈 줄을 싹 무시합니다.
     
-    echo "========================================"
+    powershell -Command "Get-Process | Where-Object { \$_.MainWindowTitle -ne '' } | Sort-Object WS -Descending | Select-Object -First 5 ProcessName, WorkingSet, CPU, Id | Format-Table -HideTableHeaders -AutoSize" | \
+    awk '{
+        # [수정된 부분] 프로그램 이름($1)이 비어있으면 이 줄은 건너뜀 (유령 줄 제거)
+        if ($1 == "") next;
+
+        # 메모리 계산 (KB -> MB)
+        mem_mb = $2 / 1024 / 1024;
+        
+        # CPU 시간 (비어있으면 0)
+        cpu = $3; if (cpu == "") cpu = 0;
+        
+        # 출력 포맷팅 (이름 20자 제한)
+        printf "%-20.20s : %8.2f MB : %8.2f s : %s\n", $1, mem_mb, cpu, $4
+    }'
+    
+    echo "================================================================"
+    echo " [안내] 현재 창이 열려있는 프로그램만 표시합니다."
+    echo "----------------------------------------------------------------"
     echo "1. 새로고침"
     echo "2. 프로세스 종료 (PID 입력)"
     echo "3. 종료"
@@ -33,15 +45,9 @@ while true; do
         2) 
             echo -n "종료할 PID 입력: "
             read target_pid
-            # PID가 숫자인지 확인
-            if [[ "$target_pid" =~ ^[0-9]+$ ]]; then
-                kill -9 $target_pid
-                echo "PID $target_pid 종료 시도 완료."
-                sleep 2
-            else
-                echo "잘못된 PID입니다."
-                sleep 1
-            fi
+            # 윈도우 프로세스 강제 종료
+            taskkill //PID $target_pid //F
+            sleep 2
             ;;
         3) echo "모니터링을 종료합니다."; break ;;
         *) echo "잘못된 입력입니다."; sleep 1 ;;
