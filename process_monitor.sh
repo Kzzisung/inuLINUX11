@@ -46,7 +46,7 @@ while true; do
             echo -n "종료할 PID 입력: "
             read target_pid
             # 윈도우 프로세스 강제 종료
-            taskkill //PID $target_pid //F
+            taskkill //PID $target_pid
             sleep 2
             ;;
         3) echo "모니터링을 종료합니다."; break ;;
