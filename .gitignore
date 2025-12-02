@@ -1,0 +1,4 @@
+backup/
+*.tar.gz
+*.o
+*.exe
