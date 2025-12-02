@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "========================================"
-echo " 🔍 네트워크 상태 진단 도구"
+echo " 🔍 네트워크 상태 진단 도구 (macOS)"
 echo "========================================"
 echo
 
@@ -9,8 +9,8 @@ echo
 echo "[1] 현재 LISTEN 중인 포트 목록"
 echo "----------------------------------------"
 
-# LISTEN 상태인 포트 + 프로그램 이름 출력
-sudo netstat -tulnp | grep LISTEN
+# lsof 를 사용해 LISTEN 포트 확인
+sudo lsof -iTCP -sTCP:LISTEN -n -P
 
 echo
 echo "----------------------------------------"
@@ -20,9 +20,8 @@ echo
 echo "[2] 현재 ESTABLISHED 연결 상태 (외부 접속 감시)"
 echo "----------------------------------------"
 
-# 외부와 연결된 ESTABLISHED 연결만 추출
-# netstat 결과 구조: Proto | Recv-Q | Send-Q | Local Address | Foreign Address | State | PID/Program
-sudo netstat -tnp | grep ESTABLISHED | awk '{print "외부 IP: "$5"  |  상태: "$6"  |  프로세스: "$7}'
+# netstat은 macOS에서 p 옵션이 없으므로, 대신 ESTABLISHED만 필터링
+netstat -an | grep ESTABLISHED | awk '{print $5}'
 
 echo
 echo "----------------------------------------"
